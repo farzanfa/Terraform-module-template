@@ -39,6 +39,7 @@ pipelines:
         script:
           - cd terraform
           - terraform init
+          - echo "$DEV_TFVARS_CONTENT" > environments/dev.tfvars
           - terraform plan -var-file=environments/dev.tfvars -input=false
 
   branches:
@@ -67,6 +68,8 @@ pipelines:
           script:
             - cd terraform
             - terraform init
+            - echo "=== Restore dev.tfvars from Repo Variable ==="
+            - echo "$DEV_TFVARS_CONTENT" > environments/dev.tfvars
             - echo "=== Generating Plan ==="
             - terraform plan -var-file=environments/dev.tfvars -out=tfplan -input=false
             - echo "=== Applying Plan ==="
