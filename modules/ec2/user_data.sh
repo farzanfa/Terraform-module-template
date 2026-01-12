@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# EC2 User Data Script
+# EC2 User Data Script (Ubuntu 22.04)
 # Installs Docker and runs PostgreSQL 18 & Valkey as containers
 # =============================================================================
 
@@ -18,28 +18,37 @@ AWS_REGION="${aws_region}"
 # System Updates
 # -----------------------------------------------------------------------------
 echo "=== Updating system packages ==="
-dnf update -y
+apt-get update -y
+apt-get upgrade -y
 
 # -----------------------------------------------------------------------------
 # Install Docker
 # -----------------------------------------------------------------------------
 echo "=== Installing Docker ==="
-dnf install -y docker
+
+# Install prerequisites
+apt-get install -y ca-certificates curl gnupg lsb-release
+
+# Add Docker's official GPG key
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add Docker repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Start and enable Docker
 systemctl start docker
 systemctl enable docker
 
-# Add ec2-user to docker group
-usermod -aG docker ec2-user
-
-# -----------------------------------------------------------------------------
-# Install Docker Compose
-# -----------------------------------------------------------------------------
-echo "=== Installing Docker Compose ==="
-curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+# Add ubuntu user to docker group
+usermod -aG docker ubuntu
 
 # -----------------------------------------------------------------------------
 # Create Data Directories
@@ -48,13 +57,16 @@ echo "=== Creating data directories ==="
 mkdir -p /opt/password-manager/data/postgresql
 mkdir -p /opt/password-manager/data/valkey
 mkdir -p /opt/password-manager/logs
+chown -R ubuntu:ubuntu /opt/password-manager
 
 # -----------------------------------------------------------------------------
 # Install CloudWatch Agent
 # -----------------------------------------------------------------------------
 echo "=== Installing CloudWatch Agent ==="
 
-dnf install -y amazon-cloudwatch-agent
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+dpkg -i amazon-cloudwatch-agent.deb
+rm amazon-cloudwatch-agent.deb
 
 # Configure CloudWatch Agent
 cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << EOF
@@ -68,13 +80,13 @@ cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << EOF
       "files": {
         "collect_list": [
           {
-            "file_path": "/var/log/messages",
+            "file_path": "/var/log/syslog",
             "log_group_name": "$SYSTEM_LOG_GROUP",
-            "log_stream_name": "{instance_id}/messages",
+            "log_stream_name": "{instance_id}/syslog",
             "retention_in_days": 30
           },
           {
-            "file_path": "/var/log/docker",
+            "file_path": "/var/log/docker.log",
             "log_group_name": "$BACKEND_LOG_GROUP",
             "log_stream_name": "{instance_id}/docker",
             "retention_in_days": 30
@@ -216,13 +228,14 @@ EOF
 
 # Copy as default .env if not exists
 cp /opt/password-manager/.env.example /opt/password-manager/.env
+chown ubuntu:ubuntu /opt/password-manager/.env /opt/password-manager/.env.example
 
 # -----------------------------------------------------------------------------
 # Start PostgreSQL and Valkey Containers
 # -----------------------------------------------------------------------------
 echo "=== Starting PostgreSQL and Valkey containers ==="
 cd /opt/password-manager
-docker-compose up -d postgresql valkey
+docker compose up -d postgresql valkey
 
 # Wait for services to be healthy
 echo "=== Waiting for services to be healthy ==="
@@ -230,4 +243,4 @@ sleep 30
 
 echo "=== User data script completed ==="
 echo "PostgreSQL and Valkey are running as Docker containers"
-echo "To start the backend: cd /opt/password-manager && docker-compose up -d backend"
+echo "To start the backend: cd /opt/password-manager && docker compose up -d backend"
