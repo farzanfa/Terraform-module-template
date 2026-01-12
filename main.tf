@@ -1,0 +1,141 @@
+# =============================================================================
+# Password Manager Infrastructure - Main Configuration
+# =============================================================================
+
+locals {
+  name_prefix = "${var.project_name}-${var.environment}"
+
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    Owner       = var.owner
+    CostCenter  = var.cost_center
+  }
+}
+
+# =============================================================================
+# Data Sources
+# =============================================================================
+
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+# =============================================================================
+# VPC Module
+# =============================================================================
+
+module "vpc" {
+  source = "./modules/vpc"
+
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_cidr             = var.vpc_cidr
+  public_subnet_cidrs  = var.public_subnet_cidrs
+  private_subnet_cidrs = var.private_subnet_cidrs
+  availability_zones   = var.availability_zones
+  enable_nat_gateway   = var.enable_nat_gateway
+  single_nat_gateway   = var.single_nat_gateway
+  allowed_ssh_cidrs    = var.allowed_ssh_cidrs
+  backend_port         = var.backend_port
+
+  tags = local.common_tags
+}
+
+# =============================================================================
+# IAM Module
+# =============================================================================
+
+module "iam" {
+  source = "./modules/iam"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+  account_id   = data.aws_caller_identity.current.account_id
+
+  tags = local.common_tags
+}
+
+# =============================================================================
+# Monitoring Module
+# =============================================================================
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  log_retention_days = var.log_retention_days
+
+  tags = local.common_tags
+}
+
+# =============================================================================
+# EC2 Module
+# =============================================================================
+
+module "ec2" {
+  source = "./modules/ec2"
+
+  project_name               = var.project_name
+  environment                = var.environment
+  instance_type              = var.instance_type
+  key_pair_name              = var.key_pair_name
+  subnet_id                  = module.vpc.private_subnet_ids[0]
+  security_group_ids         = [module.vpc.ec2_security_group_id]
+  iam_instance_profile_name  = module.iam.ec2_instance_profile_name
+  root_volume_size           = var.root_volume_size
+  data_volume_size           = var.data_volume_size
+  enable_detailed_monitoring = var.enable_detailed_monitoring
+  backend_log_group_name     = module.monitoring.backend_log_group_name
+  system_log_group_name      = module.monitoring.system_log_group_name
+  aws_region                 = var.aws_region
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc, module.iam, module.monitoring]
+}
+
+# =============================================================================
+# ALB Module
+# =============================================================================
+
+module "alb" {
+  source = "./modules/alb"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  security_group_id  = module.vpc.alb_security_group_id
+  target_instance_id = module.ec2.instance_id
+  backend_port       = var.backend_port
+  health_check_path  = var.health_check_path
+  certificate_arn    = var.create_acm_certificate ? module.s3_cloudfront.acm_certificate_arn : var.existing_acm_certificate_arn
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc, module.ec2]
+}
+
+# =============================================================================
+# S3 + CloudFront Module
+# =============================================================================
+
+module "s3_cloudfront" {
+  source = "./modules/s3-cloudfront"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  project_name           = var.project_name
+  environment            = var.environment
+  domain_name            = var.domain_name
+  frontend_subdomain     = var.frontend_subdomain
+  create_acm_certificate = var.create_acm_certificate
+
+  tags = local.common_tags
+}
