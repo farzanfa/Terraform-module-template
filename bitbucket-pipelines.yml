@@ -1,0 +1,73 @@
+# Bitbucket Pipelines Configuration for Terraform
+# Includes: Formatting, Validation, Security Checks (tfsec), Linting (tflint), Plan, and Apply
+
+image: hashicorp/terraform:latest
+
+pipelines:
+  default:
+    - step:
+        name: "Validate, Lint, and Security Scan"
+        script:
+          - cd terraform
+          
+          # 1. Format Check
+          - echo "=== Running Terraform Format Check ==="
+          - terraform fmt -check -recursive
+          
+          # 2. Init
+          - echo "=== Initializing Terraform ==="
+          - terraform init -backend=false
+          
+          # 3. Validate
+          - echo "=== Validating Configuration ==="
+          - terraform validate
+
+          # 4. Install and Run TFLint
+          - echo "=== Running TFLint ==="
+          - apt-get update && apt-get install -y curl unzip
+          - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          - tflint --init
+          - tflint --recursive
+
+          # 5. Install and Run TFSec
+          - echo "=== Running TFSec Security Scan ==="
+          - curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+          - tfsec .
+
+    - step:
+        name: "Speculative Plan"
+        script:
+          - cd terraform
+          - terraform init
+          - terraform plan -var-file=environments/dev.tfvars -input=false
+
+  branches:
+    main:
+      - step:
+          name: "Validate, Lint, and Security Scan"
+          script:
+            - cd terraform
+            # Basic checks again to ensure quality before deploy
+            - terraform fmt -check -recursive
+            - terraform init -backend=false
+            - terraform validate
+            
+            # Install & Run Linters (Best practice to run on main commit too)
+            - apt-get update && apt-get install -y curl unzip
+            - curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+            - tflint --init
+            - tflint --recursive
+            - curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+            - tfsec .
+
+      - step:
+          name: "Plan and Apply (Dev)"
+          deployment: test  # Maps to Bitbucket 'test' environment variables
+          trigger: manual   # Safer to have manual trigger for apply
+          script:
+            - cd terraform
+            - terraform init
+            - echo "=== Generating Plan ==="
+            - terraform plan -var-file=environments/dev.tfvars -out=tfplan -input=false
+            - echo "=== Applying Plan ==="
+            - terraform apply -auto-approve -input=false tfplan
