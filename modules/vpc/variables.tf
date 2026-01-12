@@ -50,10 +50,10 @@ variable "allowed_ssh_cidrs" {
   default     = []
 }
 
-variable "backend_port" {
-  description = "Port the backend application listens on"
-  type        = number
-  default     = 8000
+variable "application_ports" {
+  description = "List of ports the backend application listens on"
+  type        = list(number)
+  default     = [8000]
 }
 
 variable "tags" {

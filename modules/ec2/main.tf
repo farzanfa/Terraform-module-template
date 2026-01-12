@@ -58,6 +58,9 @@ resource "aws_instance" "main" {
     system_log_group_name  = var.system_log_group_name
     aws_region             = var.aws_region
     ecr_repository_url     = var.ecr_repository_url
+    db_password            = var.db_password
+    db_user                = var.db_user
+    db_name                = var.db_name
   }))
 
   metadata_options {

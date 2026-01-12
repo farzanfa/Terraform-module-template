@@ -40,7 +40,7 @@ module "vpc" {
   enable_nat_gateway   = var.enable_nat_gateway
   single_nat_gateway   = var.single_nat_gateway
   allowed_ssh_cidrs    = var.allowed_ssh_cidrs
-  backend_port         = var.backend_port
+  application_ports    = var.application_ports
 
   tags = local.common_tags
 }
@@ -111,6 +111,9 @@ module "ec2" {
   system_log_group_name      = module.monitoring.system_log_group_name
   aws_region                 = var.aws_region
   ecr_repository_url         = module.ecr.repository_url
+  db_password                = var.db_password
+  db_user                    = var.db_user
+  db_name                    = var.db_name
 
   tags = local.common_tags
 
@@ -165,7 +168,7 @@ module "alb" {
   public_subnet_ids  = module.vpc.public_subnet_ids
   security_group_id  = module.vpc.alb_security_group_id
   target_instance_id = module.ec2.instance_id
-  backend_port       = var.backend_port
+  backend_port       = var.application_ports[0]
   health_check_path  = var.health_check_path
   certificate_arn    = var.create_acm_certificate ? module.s3_cloudfront.acm_certificate_arn : var.existing_acm_certificate_arn
 

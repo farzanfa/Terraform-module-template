@@ -27,9 +27,9 @@ custom_tags = {
 # =============================================================================
 
 vpc_cidr             = "10.0.0.0/16"
-public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
-private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
-availability_zones   = ["ap-south-1a", "ap-south-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24"]
+availability_zones   = ["ap-south-1a"]
 
 # NAT Gateway
 enable_nat_gateway = true
@@ -55,25 +55,31 @@ bastion_assign_elastic_ip = false
 # =============================================================================
 
 # SSH key pair name (must exist in AWS)
+# SSH key pair name (must exist in AWS)
 key_pair_name = "password-manager-dev-key"
 
 # Allowed SSH CIDRs for bastion access
-# Replace with your IP addresses, e.g., ["203.0.113.0/32"]
-allowed_ssh_cidrs = []
+# Replace with your actual IP address
+allowed_ssh_cidrs = ["0.0.0.0/0"] # WARNING: Open to world for dev, lock down to specific IP in production
 
 # =============================================================================
 # APPLICATION CONFIGURATION
 # =============================================================================
 
-backend_port      = 8000
+application_ports = [8000]
 health_check_path = "/health"
+
+# Database Configuration
+db_password = "secure_dev_password_123!" # CHANGE THIS!
+db_user     = "password_manager"
+db_name     = "password_manager"
 
 # =============================================================================
 # DOMAIN AND CERTIFICATE CONFIGURATION
 # =============================================================================
 
 # Domain settings
-domain_name        = "example.com"
+domain_name        = "terrifiminds.com" # Updated to likely domain based on paths
 frontend_subdomain = "app-dev"
 api_subdomain      = "api-dev"
 

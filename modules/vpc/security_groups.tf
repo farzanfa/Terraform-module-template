@@ -29,13 +29,16 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Egress to EC2 backend
-  egress {
-    description     = "Backend traffic to EC2"
-    from_port       = var.backend_port
-    to_port         = var.backend_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2.id]
+  # Egress to EC2 backend on all application ports
+  dynamic "egress" {
+    for_each = var.application_ports
+    content {
+      description     = "Backend traffic to EC2 on port ${egress.value}"
+      from_port       = egress.value
+      to_port         = egress.value
+      protocol        = "tcp"
+      security_groups = [aws_security_group.ec2.id]
+    }
   }
 
   tags = merge(var.tags, {
@@ -53,13 +56,17 @@ resource "aws_security_group" "ec2" {
   vpc_id      = aws_vpc.main.id
 
   # Backend port from ALB
-  ingress {
-    description = "Backend traffic from ALB"
-    from_port   = var.backend_port
-    to_port     = var.backend_port
-    protocol    = "tcp"
-    self        = false
-    # Will be updated after ALB SG is created
+  # Backend ports from ALB
+  dynamic "ingress" {
+    for_each = var.application_ports
+    content {
+      description = "Backend traffic from ALB on port ${ingress.value}"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      self        = false
+      # Will be updated after ALB SG is created
+    }
   }
 
   # SSH access (restricted by IP)
@@ -111,11 +118,13 @@ resource "aws_security_group" "ec2" {
 # -----------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "alb_to_ec2" {
+  for_each = toset([for p in var.application_ports : tostring(p)])
+
   type                     = "ingress"
-  from_port                = var.backend_port
-  to_port                  = var.backend_port
+  from_port                = tonumber(each.value)
+  to_port                  = tonumber(each.value)
   protocol                 = "tcp"
   security_group_id        = aws_security_group.ec2.id
   source_security_group_id = aws_security_group.alb.id
-  description              = "Backend traffic from ALB"
+  description              = "Backend traffic from ALB on port ${each.value}"
 }

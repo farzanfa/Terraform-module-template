@@ -67,6 +67,22 @@ variable "ecr_repository_url" {
   type        = string
 }
 
+variable "db_password" {
+  description = "Password for the database user"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_user" {
+  description = "Database username"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+}
+
 variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

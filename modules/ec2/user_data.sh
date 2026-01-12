@@ -197,13 +197,13 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     environment:
-      POSTGRES_DB: password_manager
-      POSTGRES_USER: password_manager
+      POSTGRES_DB: $${DB_NAME:-password_manager}
+      POSTGRES_USER: $${DB_USER:-password_manager}
       POSTGRES_PASSWORD: $${DB_PASSWORD:-changeme}
     volumes:
       - /opt/password-manager/data/postgresql:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U password_manager -d password_manager"]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-password_manager} -d $${DB_NAME:-password_manager}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -246,7 +246,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://password_manager:$${DB_PASSWORD:-changeme}@postgresql:5432/password_manager
+      - DATABASE_URL=postgresql://$${DB_USER:-password_manager}:$${DB_PASSWORD:-changeme}@postgresql:5432/$${DB_NAME:-password_manager}
       - REDIS_URL=redis://valkey:6379/0
       - ENVIRONMENT=$${ENVIRONMENT:-dev}
     depends_on:
@@ -275,8 +275,10 @@ EOF
 # Create Environment File Template
 # -----------------------------------------------------------------------------
 cat > /opt/password-manager/.env.example << 'EOF'
-# Database password (CHANGE THIS!)
-DB_PASSWORD=your_secure_password_here
+# Database password
+DB_PASSWORD=${db_password}
+DB_USER=${db_user}
+DB_NAME=${db_name}
 
 # Backend Docker image
 BACKEND_IMAGE=your-registry/password-manager-backend:latest

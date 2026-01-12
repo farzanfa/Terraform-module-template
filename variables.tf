@@ -122,9 +122,9 @@ variable "bastion_assign_elastic_ip" {
 # Application Variables
 # =============================================================================
 
-variable "backend_port" {
-  description = "Port the backend application listens on"
-  type        = number
+variable "application_ports" {
+  description = "List of ports the backend application listens on"
+  type        = list(number)
 }
 
 variable "health_check_path" {
@@ -132,8 +132,26 @@ variable "health_check_path" {
   type        = string
 }
 
+
+variable "db_password" {
+  description = "Password for the database user"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_user" {
+  description = "Database username"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+}
+
 # =============================================================================
 # Domain and Certificate Variables
+
 # =============================================================================
 
 variable "domain_name" {
