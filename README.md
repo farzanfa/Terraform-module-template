@@ -50,7 +50,6 @@ This Terraform configuration provisions a complete AWS infrastructure for the Pa
 1. **AWS CLI** configured with appropriate credentials
 2. **Terraform** >= 1.5.0
 3. **S3 bucket** for Terraform state (see bootstrap instructions)
-4. **DynamoDB table** for state locking
 
 ## Directory Structure
 
@@ -65,6 +64,7 @@ terraform/
 │   └── dev.tfvars          # Development environment values
 └── modules/
     ├── alb/                # Application Load Balancer
+    ├── bastion/            # Bastion host for SSH access
     ├── ec2/                # EC2 instance with user data
     ├── iam/                # IAM roles and policies
     ├── monitoring/         # CloudWatch resources
@@ -74,7 +74,7 @@ terraform/
 
 ## Bootstrap State Backend
 
-Before initializing Terraform, create the S3 bucket and DynamoDB table for state management:
+Before initializing Terraform, create the S3 bucket for state management:
 
 ```bash
 # Create S3 bucket
@@ -94,15 +94,9 @@ aws s3api put-bucket-encryption \
   --server-side-encryption-configuration '{
     "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
   }'
-
-# Create DynamoDB table for locking
-aws dynamodb create-table \
-  --table-name password-manager-terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region ap-south-1
 ```
+
+> **Note**: DynamoDB is not required. State locking uses `use_lockfile = true` which stores a lock file alongside the state in S3.
 
 ## Getting Started
 
@@ -148,17 +142,18 @@ terraform apply -var-file=environments/dev.tfvars
 
 ## State Management
 
-This configuration uses a remote S3 backend with DynamoDB locking:
+This configuration uses a remote S3 backend with native S3 lock file:
 
 - **S3 Bucket**: `password-manager-terraform-state`
-- **DynamoDB Table**: `password-manager-terraform-locks`
 - **State Path**: `password-manager/terraform.tfstate`
+- **Lock File**: Uses `use_lockfile = true` (no DynamoDB required)
 
 Benefits:
 - Team collaboration (shared state)
-- State locking (prevents concurrent modifications)
+- State locking via S3 lock file (prevents concurrent modifications)
 - Versioning (state history and recovery)
 - Encryption (data at rest)
+- Simplified setup (no DynamoDB table needed)
 
 ## Post-Deployment Steps
 

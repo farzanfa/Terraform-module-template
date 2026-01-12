@@ -1,76 +1,88 @@
 # =============================================================================
 # Development Environment Configuration
 # =============================================================================
+# This file contains ALL variables for the dev environment.
+# No defaults exist in variables.tf - everything is controlled here.
+# =============================================================================
 
-# -----------------------------------------------------------------------------
-# General Settings
-# -----------------------------------------------------------------------------
+# =============================================================================
+# NAMING AND TAGS
+# =============================================================================
 
-environment  = "dev"
 project_name = "password-manager"
+environment  = "dev"
 aws_region   = "ap-south-1"
 owner        = "DevOps Team"
 cost_center  = "Engineering"
 
-# -----------------------------------------------------------------------------
-# Network Configuration
-# -----------------------------------------------------------------------------
+# Additional custom tags
+custom_tags = {
+  Application = "Password Manager"
+  Team        = "Platform Engineering"
+  ManagedBy   = "Terraform"
+}
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
 
 vpc_cidr             = "10.0.0.0/16"
 public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
 availability_zones   = ["ap-south-1a", "ap-south-1b"]
 
-# NAT Gateway (single for cost optimization in dev)
+# NAT Gateway
 enable_nat_gateway = true
-single_nat_gateway = true
+single_nat_gateway = true # Single NAT for cost optimization in dev
 
-# -----------------------------------------------------------------------------
-# EC2 Configuration
-# -----------------------------------------------------------------------------
+# =============================================================================
+# EC2 CONFIGURATION - Application Server
+# =============================================================================
 
-# Instance type (smaller for dev)
-instance_type = "t3.medium"
-
-# SSH key pair (replace with your key pair name)
-key_pair_name = "password-manager-dev-key"
-
-# Allowed SSH CIDRs (replace with your IP addresses)
-# Example: ["203.0.113.0/32", "198.51.100.0/24"]
-allowed_ssh_cidrs = []
-
-# Volume sizes
-root_volume_size = 30
-data_volume_size = 50
-
-# Monitoring (basic for dev)
+instance_type              = "t3.medium"
+root_volume_size           = 60
 enable_detailed_monitoring = false
 
-# -----------------------------------------------------------------------------
-# Application Configuration
-# -----------------------------------------------------------------------------
+# =============================================================================
+# EC2 CONFIGURATION - Bastion Host
+# =============================================================================
+
+bastion_instance_type     = "t3.micro"
+bastion_assign_elastic_ip = false
+
+# =============================================================================
+# SSH ACCESS
+# =============================================================================
+
+# SSH key pair name (must exist in AWS)
+key_pair_name = "password-manager-dev-key"
+
+# Allowed SSH CIDRs for bastion access
+# Replace with your IP addresses, e.g., ["203.0.113.0/32"]
+allowed_ssh_cidrs = []
+
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
 
 backend_port      = 8000
 health_check_path = "/health"
 
-# -----------------------------------------------------------------------------
-# Domain Configuration
-# -----------------------------------------------------------------------------
+# =============================================================================
+# DOMAIN AND CERTIFICATE CONFIGURATION
+# =============================================================================
 
-# Replace with your actual domain
+# Domain settings
 domain_name        = "example.com"
 frontend_subdomain = "app-dev"
 api_subdomain      = "api-dev"
 
-# Set to false if using existing certificate
-create_acm_certificate = true
+# ACM Certificate
+create_acm_certificate       = true
+existing_acm_certificate_arn = "" # Only needed if create_acm_certificate = false
 
-# If using existing certificate, provide ARN:
-# existing_acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxx"
+# =============================================================================
+# MONITORING CONFIGURATION
+# =============================================================================
 
-# -----------------------------------------------------------------------------
-# Monitoring Configuration
-# -----------------------------------------------------------------------------
-
-# Shorter retention for dev (30 days)
-log_retention_days = 30
+log_retention_days = 30 # Shorter retention for dev

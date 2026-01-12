@@ -40,19 +40,11 @@ variable "iam_instance_profile_name" {
 variable "root_volume_size" {
   description = "Size of the root EBS volume in GB"
   type        = number
-  default     = 30
-}
-
-variable "data_volume_size" {
-  description = "Size of the data EBS volume in GB"
-  type        = number
-  default     = 50
 }
 
 variable "enable_detailed_monitoring" {
   description = "Enable detailed CloudWatch monitoring"
   type        = bool
-  default     = false
 }
 
 variable "backend_log_group_name" {

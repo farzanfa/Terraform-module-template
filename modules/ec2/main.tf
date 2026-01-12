@@ -73,27 +73,3 @@ resource "aws_instance" "main" {
     ignore_changes = [ami]
   }
 }
-
-# -----------------------------------------------------------------------------
-# Data Volume (for PostgreSQL and Valkey data persistence)
-# -----------------------------------------------------------------------------
-
-resource "aws_ebs_volume" "data" {
-  availability_zone = aws_instance.main.availability_zone
-  size              = var.data_volume_size
-  type              = "gp3"
-  encrypted         = true
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-data-volume"
-  })
-}
-
-resource "aws_volume_attachment" "data" {
-  device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.data.id
-  instance_id = aws_instance.main.id
-
-  # Prevent destruction of data volume when updating instance
-  stop_instance_before_detaching = true
-}

@@ -85,6 +85,30 @@ output "ec2_private_ip" {
 }
 
 # =============================================================================
+# Bastion Outputs
+# =============================================================================
+
+output "bastion_instance_id" {
+  description = "ID of the bastion EC2 instance"
+  value       = module.bastion.instance_id
+}
+
+output "bastion_public_ip" {
+  description = "Public IP address of the bastion host"
+  value       = module.bastion.public_ip
+}
+
+output "bastion_ssh_command" {
+  description = "SSH command to connect to bastion"
+  value       = module.bastion.ssh_command
+}
+
+output "private_ec2_ssh_via_bastion" {
+  description = "SSH command to connect to private EC2 via bastion (ProxyJump)"
+  value       = "ssh -J ec2-user@${module.bastion.public_ip} ec2-user@${module.ec2.private_ip}"
+}
+
+# =============================================================================
 # Monitoring Outputs
 # =============================================================================
 

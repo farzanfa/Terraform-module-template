@@ -1,17 +1,17 @@
 # =============================================================================
 # Terraform Backend Configuration
 # =============================================================================
-# Remote state storage using S3 with DynamoDB for state locking.
-# Ensure the S3 bucket and DynamoDB table are created before running terraform init.
+# Remote state storage using S3 with native S3 lock file for state locking.
+# Ensure the S3 bucket is created before running terraform init.
 # =============================================================================
 
 terraform {
   backend "s3" {
-    bucket         = "password-manager-terraform-state"
-    key            = "password-manager/terraform.tfstate"
-    region         = "ap-south-1"
-    encrypt        = true
-    dynamodb_table = "password-manager-terraform-locks"
+    bucket       = "password-manager-terraform-state"
+    key          = "password-manager/terraform.tfstate"
+    region       = "ap-south-1"
+    encrypt      = true
+    use_lockfile = true
 
     # Workspace-aware state paths
     # State files will be stored as: password-manager/{workspace}/terraform.tfstate
@@ -24,7 +24,7 @@ terraform {
 # 
 # The following resources must exist before initializing Terraform:
 #
-# 1. S3 Bucket:
+# S3 Bucket:
 #    aws s3api create-bucket \
 #      --bucket password-manager-terraform-state \
 #      --region ap-south-1 \
@@ -40,11 +40,6 @@ terraform {
 #        "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
 #      }'
 #
-# 2. DynamoDB Table:
-#    aws dynamodb create-table \
-#      --table-name password-manager-terraform-locks \
-#      --attribute-definitions AttributeName=LockID,AttributeType=S \
-#      --key-schema AttributeName=LockID,KeyType=HASH \
-#      --billing-mode PAY_PER_REQUEST \
-#      --region ap-south-1
+# Note: DynamoDB table is no longer required when using use_lockfile = true.
+# The lock file (.terraform.lock.hcl) is stored alongside the state file in S3.
 # =============================================================================

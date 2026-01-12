@@ -26,8 +26,3 @@ output "ami_id" {
   description = "AMI ID used by the EC2 instance"
   value       = aws_instance.main.ami
 }
-
-output "data_volume_id" {
-  description = "ID of the data EBS volume"
-  value       = aws_ebs_volume.data.id
-}

@@ -5,12 +5,15 @@
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
 
-  common_tags = {
-    Project     = var.project_name
-    Environment = var.environment
-    Owner       = var.owner
-    CostCenter  = var.cost_center
-  }
+  common_tags = merge(
+    {
+      Project     = var.project_name
+      Environment = var.environment
+      Owner       = var.owner
+      CostCenter  = var.cost_center
+    },
+    var.custom_tags
+  )
 }
 
 # =============================================================================
@@ -86,7 +89,6 @@ module "ec2" {
   security_group_ids         = [module.vpc.ec2_security_group_id]
   iam_instance_profile_name  = module.iam.ec2_instance_profile_name
   root_volume_size           = var.root_volume_size
-  data_volume_size           = var.data_volume_size
   enable_detailed_monitoring = var.enable_detailed_monitoring
   backend_log_group_name     = module.monitoring.backend_log_group_name
   system_log_group_name      = module.monitoring.system_log_group_name
@@ -95,6 +97,41 @@ module "ec2" {
   tags = local.common_tags
 
   depends_on = [module.vpc, module.iam, module.monitoring]
+}
+
+# =============================================================================
+# Bastion Module
+# =============================================================================
+
+module "bastion" {
+  source = "./modules/bastion"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  vpc_id            = module.vpc.vpc_id
+  subnet_id         = module.vpc.public_subnet_ids[0]
+  instance_type     = var.bastion_instance_type
+  key_pair_name     = var.key_pair_name
+  allowed_ssh_cidrs = var.allowed_ssh_cidrs
+  assign_elastic_ip = var.bastion_assign_elastic_ip
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc]
+}
+
+# =============================================================================
+# Security Group Rule: SSH from Bastion to Private EC2
+# =============================================================================
+
+resource "aws_security_group_rule" "bastion_to_ec2_ssh" {
+  type                     = "ingress"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = module.vpc.ec2_security_group_id
+  source_security_group_id = module.bastion.security_group_id
+  description              = "SSH from Bastion host"
 }
 
 # =============================================================================
