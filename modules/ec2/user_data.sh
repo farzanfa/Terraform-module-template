@@ -13,6 +13,7 @@ ENVIRONMENT="${environment}"
 BACKEND_LOG_GROUP="${backend_log_group_name}"
 SYSTEM_LOG_GROUP="${system_log_group_name}"
 AWS_REGION="${aws_region}"
+ECR_REPOSITORY_URL="${ecr_repository_url}"
 
 # -----------------------------------------------------------------------------
 # System Updates
@@ -49,6 +50,64 @@ systemctl enable docker
 
 # Add ubuntu user to docker group
 usermod -aG docker ubuntu
+
+# -----------------------------------------------------------------------------
+# Install AWS CLI v2
+# -----------------------------------------------------------------------------
+echo "=== Installing AWS CLI v2 ==="
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+apt-get install -y unzip
+unzip -q awscliv2.zip
+./aws/install
+rm -rf awscliv2.zip aws
+
+# -----------------------------------------------------------------------------
+# Authenticate Docker with ECR
+# -----------------------------------------------------------------------------
+echo "=== Configuring ECR Authentication ==="
+
+# Extract ECR registry URL from repository URL
+ECR_REGISTRY=$(echo "$ECR_REPOSITORY_URL" | cut -d'/' -f1)
+
+# Create ECR credential helper script
+cat > /usr/local/bin/ecr-login.sh << 'EOFSCRIPT'
+#!/bin/bash
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+EOFSCRIPT
+chmod +x /usr/local/bin/ecr-login.sh
+
+# Create systemd timer for ECR token refresh (tokens expire every 12 hours)
+cat > /etc/systemd/system/ecr-login.service << EOF
+[Unit]
+Description=ECR Docker Login
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ecr-login.sh
+Environment="AWS_REGION=$AWS_REGION"
+Environment="ECR_REGISTRY=$ECR_REGISTRY"
+EOF
+
+cat > /etc/systemd/system/ecr-login.timer << 'EOF'
+[Unit]
+Description=Refresh ECR Docker credentials every 6 hours
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable ecr-login.timer
+systemctl start ecr-login.timer
+
+# Initial ECR login
+aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 # -----------------------------------------------------------------------------
 # Create Data Directories

@@ -169,3 +169,27 @@ variable "log_retention_days" {
   description = "Number of days to retain CloudWatch logs"
   type        = number
 }
+
+# =============================================================================
+# ECR Variables
+# =============================================================================
+
+variable "ecr_image_tag_mutability" {
+  description = "Image tag mutability setting (MUTABLE or IMMUTABLE)"
+  type        = string
+}
+
+variable "ecr_scan_on_push" {
+  description = "Enable image scanning on push"
+  type        = bool
+}
+
+variable "ecr_image_count_to_keep" {
+  description = "Number of tagged images to keep"
+  type        = number
+}
+
+variable "ecr_untagged_image_expiry_days" {
+  description = "Days after which untagged images expire"
+  type        = number
+}

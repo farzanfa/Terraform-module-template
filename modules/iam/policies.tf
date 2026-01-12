@@ -79,3 +79,42 @@ resource "aws_iam_policy" "ssm_read" {
     Name = "${var.project_name}-${var.environment}-ssm-read-policy"
   })
 }
+
+# -----------------------------------------------------------------------------
+# ECR Pull Policy
+# -----------------------------------------------------------------------------
+
+resource "aws_iam_policy" "ecr_pull" {
+  name        = "${var.project_name}-${var.environment}-ecr-pull-policy"
+  description = "Allows EC2 to pull images from ECR"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowECRAuth"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowECRPull"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = [
+          "arn:aws:ecr:${var.aws_region}:${var.account_id}:repository/${var.project_name}-${var.environment}-*"
+        ]
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-ecr-pull-policy"
+  })
+}

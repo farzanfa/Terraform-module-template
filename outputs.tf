@@ -141,3 +141,33 @@ output "dns_records_to_create" {
     }
   }
 }
+
+# =============================================================================
+# ECR Outputs
+# =============================================================================
+
+output "ecr_repository_url" {
+  description = "URL of the ECR repository for backend images"
+  value       = module.ecr.repository_url
+}
+
+output "ecr_repository_name" {
+  description = "Name of the ECR repository"
+  value       = module.ecr.repository_name
+}
+
+output "docker_login_command" {
+  description = "Command to authenticate Docker with ECR"
+  value       = "aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${module.ecr.registry_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+}
+
+output "docker_push_commands" {
+  description = "Commands to build and push Docker image to ECR"
+  value       = <<-EOT
+    # Build image
+    docker build -t ${module.ecr.repository_url}:latest .
+    
+    # Push image
+    docker push ${module.ecr.repository_url}:latest
+  EOT
+}

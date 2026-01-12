@@ -62,6 +62,11 @@ variable "aws_region" {
   type        = string
 }
 
+variable "ecr_repository_url" {
+  description = "URL of the ECR repository for backend images"
+  type        = string
+}
+
 variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

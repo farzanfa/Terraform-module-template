@@ -75,6 +75,23 @@ module "monitoring" {
 }
 
 # =============================================================================
+# ECR Module
+# =============================================================================
+
+module "ecr" {
+  source = "./modules/ecr"
+
+  project_name               = var.project_name
+  environment                = var.environment
+  image_tag_mutability       = var.ecr_image_tag_mutability
+  scan_on_push               = var.ecr_scan_on_push
+  image_count_to_keep        = var.ecr_image_count_to_keep
+  untagged_image_expiry_days = var.ecr_untagged_image_expiry_days
+
+  tags = local.common_tags
+}
+
+# =============================================================================
 # EC2 Module
 # =============================================================================
 
@@ -93,10 +110,11 @@ module "ec2" {
   backend_log_group_name     = module.monitoring.backend_log_group_name
   system_log_group_name      = module.monitoring.system_log_group_name
   aws_region                 = var.aws_region
+  ecr_repository_url         = module.ecr.repository_url
 
   tags = local.common_tags
 
-  depends_on = [module.vpc, module.iam, module.monitoring]
+  depends_on = [module.vpc, module.iam, module.monitoring, module.ecr]
 }
 
 # =============================================================================

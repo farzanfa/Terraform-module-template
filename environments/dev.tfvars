@@ -86,3 +86,12 @@ existing_acm_certificate_arn = "" # Only needed if create_acm_certificate = fals
 # =============================================================================
 
 log_retention_days = 30 # Shorter retention for dev
+
+# =============================================================================
+# ECR CONFIGURATION
+# =============================================================================
+
+ecr_image_tag_mutability       = "MUTABLE"
+ecr_scan_on_push               = true
+ecr_image_count_to_keep        = 10
+ecr_untagged_image_expiry_days = 7
